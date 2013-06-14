@@ -1,0 +1,786 @@
+options {
+  IGNORE_CASE = true;
+  //STATIC = false;
+}
+
+PARSER_BEGIN(LogoParser)
+
+package parser;
+
+import java.util.ArrayList;
+import java.util.Map;
+import java.util.SortedMap;
+import java.util.TreeMap;
+
+import error.CompilationException;
+import error.CompilationErrorType;
+import symbol.SymbolTable;
+import syntaxtree.AbsStatementNode;
+import syntaxtree.AbsValueNode;
+import syntaxtree.MakeSNode;
+import type.VariableName;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.SortedMap;
+import java.util.TreeMap;
+
+import interpreter.ProcedureDefinition;
+
+import syntaxtree.AndVNode;
+import syntaxtree.ArcSNode;
+import syntaxtree.BackSNode;
+import syntaxtree.ButFirstVNode;
+import syntaxtree.ButLastVNode;
+import syntaxtree.CircleSNode;
+import syntaxtree.CleanSNode;
+import syntaxtree.ClearScreenSNode;
+import syntaxtree.DeQueueSNode;
+import syntaxtree.DiffVNode;
+import syntaxtree.DivVNode;
+import syntaxtree.EllipseSNode;
+import syntaxtree.ElseSNode;
+import syntaxtree.EqualVNode;
+import syntaxtree.FirstVNode;
+import syntaxtree.ForSNode;
+import syntaxtree.ForwardSNode;
+import syntaxtree.FputVNode;
+import syntaxtree.GreaterEqualVNode;
+import syntaxtree.GreaterVNode;
+import syntaxtree.HeadingSNode;
+import syntaxtree.HideTurtleSNode;
+import syntaxtree.HomeSNode;
+import syntaxtree.IfElseSNode;
+import syntaxtree.IfSNode;
+import syntaxtree.IseqVNode;
+import syntaxtree.ItemVNode;
+import syntaxtree.LabelSNode;
+import syntaxtree.LastVNode;
+import syntaxtree.LeftSNode;
+import syntaxtree.LessEqualVNode;
+import syntaxtree.LessVNode;
+import syntaxtree.ListDataVNode;
+import syntaxtree.ListVNode;
+import syntaxtree.LputVNode;
+import syntaxtree.MakeSNode;
+import syntaxtree.MinusVNode;
+import syntaxtree.ModVNode;
+import syntaxtree.NotVNode;
+import syntaxtree.NotEqualVNode;
+import syntaxtree.NumberVNode;
+import syntaxtree.OrVNode;
+import syntaxtree.PenReverseSNode;
+import syntaxtree.PenVNode;
+import syntaxtree.PenColorVNode;
+import syntaxtree.PenDownSNode;
+import syntaxtree.PenUpSNode;
+import syntaxtree.PenPaintSNode;
+import syntaxtree.PenEraseSNode;
+import syntaxtree.PickVNode;
+import syntaxtree.PopSNode;
+import syntaxtree.PowerVNode;
+import syntaxtree.PrintSNode;
+import syntaxtree.ProcedureSNode;
+import syntaxtree.ProdVNode;
+import syntaxtree.PushSNode;
+import syntaxtree.QueueSNode;
+import syntaxtree.RemoveVNode;
+import syntaxtree.RepeatSNode;
+import syntaxtree.ReverseVNode;
+import syntaxtree.RightSNode;
+import syntaxtree.RoundVNode;
+import syntaxtree.RseqVNode;
+import syntaxtree.SentenceVNode;
+import syntaxtree.SetBackgroundSNode;
+import syntaxtree.SetPenSNode;
+import syntaxtree.SetPenColorSNode;
+import syntaxtree.SetPosSNode;
+import syntaxtree.SetXSNode;
+import syntaxtree.SetYSNode;
+import syntaxtree.ShowTurtleSNode;
+import syntaxtree.SinVNode;
+import syntaxtree.SqrtVNode;
+import syntaxtree.SumVNode;
+import syntaxtree.ThenSNode;
+import syntaxtree.ThingVNode;
+import syntaxtree.UntilSNode;
+import syntaxtree.WaitSNode;
+import syntaxtree.WhileSNode;
+import syntaxtree.WordDataVNode;
+import syntaxtree.WordVNode;
+import syntaxtree.YoudontsaySNode;
+import type.VariableName;
+
+public class LogoParser {
+
+    private static SymbolTable symbolTable = new SymbolTable();
+    private static Integer currentLine = 0;
+
+    public SymbolTable getSymbolTable()
+    {
+      return this.symbolTable;
+    }
+
+    public SortedMap<Integer,AbsStatementNode> executeCompiler() throws CompilationException
+    {
+      try
+      {
+          SortedMap<Integer,AbsStatementNode> code = new TreeMap<Integer,AbsStatementNode>();
+          this.symbolTable.clear();
+          statements(code);
+          return code;
+        }
+        catch(ParseException e)
+        {
+        if (e.currentToken!=null) {
+                throw new CompilationException(CompilationErrorType.SYNTAX_ERROR,
+                            e.currentToken.endLine, e);
+            }
+            else if (this.token!=null) {
+                throw new CompilationException(CompilationErrorType.SYNTAX_ERROR,
+                            this.token.endLine,  e);
+            }
+            throw new CompilationException(CompilationErrorType.SYNTAX_ERROR, e);
+        }
+        catch(TokenMgrError e) {
+            if (this.token!=null) {
+                throw new CompilationException(CompilationErrorType.ILLEGAL_CHARACTER,
+                            this.token.endLine,  e);
+            }
+            throw new CompilationException(CompilationErrorType.INTERNAL_LEXER_ERROR, e);
+        }
+        catch(Throwable e) {
+            throw new CompilationException(CompilationErrorType.INTERNAL_ERROR, e);
+        }
+    }
+}
+
+PARSER_END(LogoParser)
+
+SKIP :
+{
+      " "
+    | "\r"
+    | "\t"
+    | "\n\t"
+     // TODO : ajout des commentaires
+}
+
+TOKEN :
+{
+    < CR: "\n" | "\n\t" | "\r" >
+}
+
+//////////NUMBER
+
+TOKEN:
+{
+
+      < NUMBER: (<DIGIT>)+ (<DECIMAL_PART>)? >
+    | < #DIGIT: ["0"-"9"] >
+    | < #DECIMAL_PART: "." (<DIGIT>)+ >
+}
+
+//////////RESERVED WORD
+TOKEN :
+{
+      < MAKE : "make" >
+    | < LOCALMAKE : "localmake" >
+    | < LOCAL : "local" >
+    | < WORD : "word" >
+    | < LIST : "list" >
+    | < SENTENCE : "sentence" | "SE" >
+    | < FPUT : "fput" >
+    | < LPUT : "lput" >
+    | < REVERSE : "reverse" >
+    | < PUSH : "push" >
+    | < POP : "pop" >
+    | < QUEUE : "queue" >
+    | < DEQUEUE : "dequeue" >
+    | < THING : "thing" >
+    | < FIRST : "first" >
+    | < LAST : "last" >
+    | < BUTFIRST : "butfirst" >
+    | < BUTLAST : "butlast" >
+    | < ITEM : "item" >
+    | < PICK : "pick" >
+    | < REMOVE : "remove" >
+    | < WAIT : "wait" >
+}
+
+//////////RESERVED WORD
+TOKEN :
+{
+      < SUM : "sum" >
+    | < DIFF : "difference" >
+    | < MINUS : "minus" >
+    | < PROD : "product" >
+    | < DIV : "quotient" >
+    | < MOD : "remainder" | "modulo" >
+    | < ROUND : "round" >
+    | < SQRT : "sqrt" >
+    | < POWER : "power" >
+    | < SIN : "sin" >
+    | < ISEQ : "iseq" >
+    | < RSEQ : "rseq" > 
+}
+
+//////////RESERVED WORD
+TOKEN :
+{
+      < AND : "and" >
+    | < OR : "or" >
+    | < NOT : "not" >
+    | < LESS : "lessp" | "less?" >
+    | < LESSEQUAL : "lessequalp" | "lessequal?" >
+    | < GREATER : "greaterp" | "greater?" >
+    | < GREATEREQUAL : "greaterequalp" | "greaterequal?" >
+    | < EQUAL : "equalp" | "equal?" >
+    | < NOTEQUAL : "notequalp" | "notequal?" >
+}
+
+//////////MAIN STATEMENTS
+TOKEN :
+{
+	  < PRINT: "print" | "show" >
+	| < IF: "if" >
+	| < IFELSE : "ifelse" >
+	| < REPEAT : "repeat" >
+	| < FOR : "for" >
+	| < WHILE : "while" >
+	| < UNTIL : "until" >
+	| < TO : "to" >
+	| < END : "end" >
+}
+
+//////////TURTLE MOVEMENTS
+TOKEN:
+{
+    < FORWARD : "forward" | "FO" >
+  | < BACK : "back" | "BK" >
+  | < RIGHT : "right" | "RT" >
+  | < LEFT : "left" | "LT" >
+  | < HOME : "home" >
+  | < SETPOS : "setpos" >
+  | < SETX : "setx" >
+  | < SETY : "sety" >
+  | < SETXY : "setxy" >
+  | < SETHEADING : "setheading" | "SETH" >
+  | < SHOWTURTLE : "showturtle" | "ST" >
+  | < HIDETURTLE : "hideturtle" | "HT" >
+  | < CLEAN : "clean" >
+  | < CLEARSCREEN : "clearscreen" | "CS" >
+  | < LABEL : "label" >
+  | < CIRCLE : "circle" >
+  | < ARC : "arc" >
+  | < ELLIPSE : "ellipse" >
+  | < PENDOWN : "pendown" | "PD" >
+  | < PENUP : "penup" | "PU" >
+  | < SETPC : "setpencolor" | "SETPC" >
+  | < PENERASE : "penerase" | "PE" >
+  | < PENPAINT : "penpaint" | "PPT" >
+  | < PENCOLOR : "pencolor" | "PC" >
+  | < PENREVERSE : "penreverse" | "PX" >
+  | < PEN : "pen" >
+  | < SETPEN : "setpen" >
+  | < SETBACKGROUND : "setbackground" | "SETBG" >
+    
+}
+
+//////////DATA STRUCTURES
+
+TOKEN :
+{
+      < TOKENWORD: (<LETTER>) (<LETTER> | <DIGIT>)* > //choix arbitraire mais il serait facile d'autoriser des caractères supplémentaires
+    | < #LETTER: ["A"-"Z","a"-"z"] >
+    | < NONEVALUATE : "\"" >
+    | < ACCESSOP : ":" >
+    | < OPENBRACKET : "[" >
+    | < CLOSEBRACKET : "]" >
+    | < OPENPARENTH : "(" >
+    | < CLOSEPARENTH : ")" >
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Grammar
+////////////////////////////////////////////////////////////////////////////////
+
+private void statements(SortedMap<Integer,AbsStatementNode> code) throws CompilationException :
+{
+  HashMap<String,ProcedureDefinition> procedures = new HashMap<String,ProcedureDefinition>();
+}
+{
+    procedure_definitions(procedures) program(code)                                     
+}
+
+private void procedure_definitions(HashMap<String,ProcedureDefinition> procedures) throws CompilationException :
+{
+}
+{
+   procedure(procedures) procedureRecur(procedures)    {}
+   |                                                   {}
+}
+
+private void procedure(HashMap<String,ProcedureDefinition> procedures) throws CompilationException :
+{
+  Token t;
+  ArrayList<ThingVNode> args;
+  ArrayList<AbsStatementNode> instructions;
+}
+{
+  < TO > t=< TOKENWORD > args=argument_list() < CR > newline() instructions=procedure_instructions() < END > < CR > newline() {if(procedures.keySet().contains(t.image)) throw new CompilationException(CompilationErrorType.FUNCTION_REDEFINITION, currentLine, t.image);
+                                                                                                                    else procedures.put(t.image,new ProcedureDefinition(args,instructions));}
+}
+
+private void newline() : 
+{
+}
+{
+  {currentLine = currentLine.intValue()+1;}
+}
+
+private HashMap<String,ProcedureDefinition> procedureRecur(HashMap<String,ProcedureDefinition> procedures) throws CompilationException :
+{
+}
+{
+  procedure(procedures) procedureRecur(procedures)     {return procedures;}
+  |                                                    {return procedures;}
+}
+
+private ArrayList<ThingVNode> argument_list() throws CompilationException :
+{
+  ArrayList<ThingVNode> args = new ArrayList<ThingVNode>();
+  ArrayList<ThingVNode> value;
+  Token t;
+}
+{
+   
+ ":"t=< TOKENWORD > value=argument_list() {args.add(new ThingVNode(t.image,currentLine));args.addAll(value);return args;}
+ | {currentLine = currentLine.intValue()+1; return args;}
+}
+
+private ArrayList<AbsStatementNode> procedure_instructions() throws CompilationException :
+{
+  ArrayList<AbsStatementNode> instructions = new ArrayList<AbsStatementNode>();
+}
+{
+  procedure_line(instructions) procedure_line_recur(instructions) {return instructions;}
+}
+
+private void procedure_line(ArrayList<AbsStatementNode> instructions) throws CompilationException :
+{
+  AbsStatementNode s;
+}
+{
+  s=statement() procedure_statementList(instructions) {instructions.add(s);currentLine = currentLine.intValue()+1;}
+  |                                                   {}
+}
+
+private void procedure_statementList(ArrayList<AbsStatementNode> instructions) throws CompilationException :
+{
+  AbsStatementNode s;
+}
+{
+  s=statement() procedure_statementList(instructions) {instructions.add(s);}  {} 
+  |                                                                           {}
+}
+
+private void procedure_line_recur(ArrayList<AbsStatementNode> instructions) throws CompilationException :
+{}
+{
+    <CR> procedure_line(instructions) procedure_line_recur(instructions) {}
+    |                                                                    {}
+}
+
+private void program(SortedMap<Integer,AbsStatementNode> code) throws CompilationException :
+{
+}
+{
+  line(code) statementsRecurs(code) {}
+}
+
+private void statementsRecurs(SortedMap<Integer,AbsStatementNode> code) throws CompilationException :
+{}
+{
+    <CR> line(code) statementsRecurs(code) {}
+    |                                      {}
+}
+
+private void line(Map<Integer,AbsStatementNode> code) throws CompilationException :
+{
+    AbsStatementNode s;
+}
+{
+    s=statement() statementList(code) {code.put(currentLine,s);
+                                        currentLine = currentLine.intValue()+1;}
+  | {}
+
+}
+
+private void statementList(Map<Integer,AbsStatementNode> code) throws CompilationException :
+{
+    AbsStatementNode s;
+}
+{
+    s=statement() statementList(code)   {code.put(currentLine,s);}
+    |                                   {}
+}
+
+private AbsStatementNode statement() throws CompilationException: //gère les différents statements du programme
+{
+  	Token t,t1,t2;
+  	ArrayList<AbsStatementNode> val1, val2;
+  	ArrayList<AbsValueNode > val3;
+ 	AbsValueNode e1, e2, e3;
+ 	AbsStatementNode s;
+}
+{
+      < MAKE > <NONEVALUATE > t= < TOKENWORD > e1=expression(){ symbolTable.declare(t.image,currentLine);
+      														 return new MakeSNode(new VariableName(t.image),e1,currentLine);}
+  	| t=< PRINT > e1=expression() {return new PrintSNode(e1,currentLine);}
+  	| t=< IF > e1=expression() < OPENBRACKET > val1=listInstructions() < CLOSEBRACKET > val2=ifParamSup()
+  							{if(val2==null) return new IfSNode(e1,new ThenSNode(val1,currentLine),currentLine); 
+                            else return new IfElseSNode(e1,new ThenSNode(val1,currentLine),new ElseSNode(val2,currentLine),currentLine);}
+  	| < IFELSE > e1=expression() < OPENBRACKET > val1=listInstructions() < CLOSEBRACKET > < OPENBRACKET > val2=listInstructions() < CLOSEBRACKET >
+  							{return new IfElseSNode(e1,new ThenSNode(val1,currentLine),new ElseSNode(val2,currentLine),currentLine);}
+ 	| < REPEAT > e1=expression() < OPENBRACKET > val1=listInstructions() < CLOSEBRACKET > {return new RepeatSNode(e1,val1,currentLine);}
+ 	| < FOR > < OPENBRACKET > t=<TOKENWORD> e1=expression() e2=expression() e3=forParamSup() < CLOSEBRACKET > < OPENBRACKET > val1=listInstructions() < CLOSEBRACKET >
+ 							{return new ForSNode(t.image,e1,e2,e3,val1,currentLine);}
+ 	| < WHILE > e1=expression() < OPENBRACKET > val1=listInstructions() < CLOSEBRACKET > {return new WhileSNode(e1,val1,currentLine);}
+ 	| < UNTIL > e1=expression() < OPENBRACKET > val1=listInstructions() < CLOSEBRACKET > {return new UntilSNode(e1,val1,currentLine);}
+    | < FORWARD > e1=expression() {return new ForwardSNode(e1,currentLine);}
+    | < BACK > e1=expression() {return new BackSNode(e1,currentLine);}
+    | < RIGHT > e1=expression() {return new RightSNode(e1,currentLine);}
+    | < LEFT > e1=expression() {return new LeftSNode(e1,currentLine);}
+    | < HOME > {return new HomeSNode(currentLine);}
+    | < SETPOS > e1=expression() e2=expression() {return new SetPosSNode(e1, e2, currentLine);}
+    | < SETXY > e1=expression() e2=expression() {return new SetPosSNode(e1,e2,currentLine);}
+    | < SETX > e1=expression() {return new SetXSNode(e1,currentLine);}
+    | < SETY > e1=expression() {return new SetYSNode(e1,currentLine);}
+    | < SETHEADING > e1=expression() {return new HeadingSNode(e1,currentLine);}
+    | < PUSH > e1=expression() e2=expression() {return new PushSNode(e1,e2,currentLine);}
+    | < POP > e1=expression() {return new PopSNode(e1,currentLine);}
+    | < QUEUE > e1=expression() e2=expression() {return new QueueSNode(e1,e2,currentLine);}
+    | < DEQUEUE > e1=expression() {return new DeQueueSNode(e1,currentLine);}
+    | < WAIT > e1=expression() {return new WaitSNode(e1,currentLine);}
+    | < SHOWTURTLE >  {return new ShowTurtleSNode(currentLine);}
+    | < HIDETURTLE >  {return new HideTurtleSNode(currentLine);}
+    | < CLEAN >  {return new CleanSNode(currentLine);}
+    | < CLEARSCREEN >  {return new ClearScreenSNode(currentLine);}
+    | < LABEL > e1=expression() {return new LabelSNode(e1,currentLine);}
+    | < CIRCLE > e1=expression() {return new CircleSNode(e1,currentLine);}
+    | < ARC > e1=expression() e2=expression() {return new ArcSNode(e1,e2,currentLine);}
+    | < ELLIPSE > e1=expression() e2=expression() {return new EllipseSNode(e1,e2,currentLine);}
+    | < PENDOWN >  {return new PenDownSNode(currentLine);}
+    | < PENUP >  {return new PenUpSNode(currentLine);}
+    | < SETPC > e1=expression() {return new SetPenColorSNode(e1,currentLine);}
+    | < PENERASE >  {return new PenEraseSNode(currentLine);}
+    | < PENPAINT >  {return new PenPaintSNode(currentLine);}
+    | < PENREVERSE >  {return new PenReverseSNode(currentLine);}
+    | < SETPEN > e1=expression() {return new SetPenSNode(e1,currentLine);}
+    | < SETBACKGROUND > e1=expression() {return new SetBackgroundSNode(e1,currentLine);}
+}
+
+private AbsValueNode expression() throws CompilationException : // retourne les différentes expression
+{
+    Token t;
+    AbsValueNode v1, v2, v3;
+    ArrayList<AbsValueNode> value;
+}
+{
+    < OPENBRACKET > value=listComplex() < CLOSEBRACKET > {return new ListDataVNode(value,currentLine);}
+    | < NONEVALUATE > t=< TOKENWORD > {return new WordDataVNode(t.image,currentLine);}
+    | < ACCESSOP > t=< TOKENWORD > {return new ThingVNode(t.image,currentLine); }
+    | < THING > t=thingParam() {return new ThingVNode(t.image,currentLine);}
+    | < WORD > value=listArg() {return new WordVNode(value,currentLine);}
+    | < LIST > value=listComplex() {return new ListVNode(value,currentLine);}
+    | < SENTENCE > value=listComplex() {return new SentenceVNode(value,currentLine);}
+    | < FPUT > v1=expression() v2=expression() {return new FputVNode(v1,v2,currentLine);}
+    | < LPUT > v1=expression() v2=expression() {return new LputVNode(v1,v2,currentLine);}
+    | < REVERSE > v1=expression(){return new ReverseVNode(v1,currentLine);}
+    | < FIRST > v1=expression() {return new FirstVNode(v1,currentLine);}
+    | < LAST > v1=expression() {return new LastVNode(v1,currentLine);}
+    | < BUTFIRST > v1=expression() {return new ButFirstVNode(v1,currentLine);}
+    | < BUTLAST > v1=expression() {return new ButLastVNode(v1,currentLine);}
+    | < ITEM > v1=expression() v2=expression() {return new ItemVNode(v1,v2,currentLine);}
+    | < PICK > v1=expression() {return new PickVNode(v1,currentLine);}
+    | < REMOVE > v1=expression() v2=expression() {return new RemoveVNode(v1,v2,currentLine);}
+    | v1=prefixed_operation_expression() {return v1;}
+    | v1=possible_infixed_expression() {return v1;}
+    | < MOD > v1=expression() v2=expression() {return new ModVNode(v1,v2,currentLine);}
+    | < ROUND > v1=expression() {return new RoundVNode(v1,currentLine);}
+    | < SQRT > v1=expression() {return new SqrtVNode(v1,currentLine);}
+    | < POWER > v1=expression() v2=expression() {return new PowerVNode(v1,v2,currentLine);}
+    | < SIN > v1=expression() {return new SinVNode(v1,currentLine);}
+    | < ISEQ > v1=expression() v2=expression() {return new IseqVNode(v1,v2,currentLine);}
+    | < RSEQ > v1=expression() v2=expression() v3=expression() {return new RseqVNode(v1,v2,v3,currentLine);}
+    | < MINUS > v1=expression() {return new MinusVNode(v1,currentLine);}
+    | < NOT > v1=expression() {return new NotVNode(v1,currentLine);}
+    | < PENCOLOR > {return new PenColorVNode(currentLine);}
+    | < PEN > {return new PenVNode(currentLine);}
+}
+
+private ArrayList<AbsStatementNode> ifParamSup() throws CompilationException : //passage du if en ifelse si retour de ifParamSup non null
+{
+	ArrayList<AbsStatementNode> val2;
+}
+{
+	  < OPENBRACKET > val2=listInstructions() < CLOSEBRACKET > {return val2;}
+	| {return null;}   
+}
+
+private AbsValueNode forParamSup() throws CompilationException : // si retour null pas du for mis automatiquement à 1 ou -1
+{
+	 AbsValueNode e;
+}
+{
+	  e=expression() {return e;}
+	| {return null;}
+}
+
+private ArrayList<AbsStatementNode> listInstructions () throws CompilationException : // retourne un array list d'instructions utilisé dans les if et boucles
+{
+ 	AbsStatementNode s;
+ 	ArrayList<AbsStatementNode> value = new ArrayList<AbsStatementNode>();
+ 	ArrayList<AbsStatementNode> result = new ArrayList<AbsStatementNode>();
+}
+{
+	  s=statement() value=listInstructions() {result.add(s);result.addAll(value);return result;}
+	| {return result;}
+}
+
+private AbsValueNode possible_infixed_expression() throws CompilationException :
+{
+  Token t;
+  AbsValueNode v;
+}
+{
+  t=< NUMBER > v=infixed_expression(new NumberVNode(t.image,currentLine)) {return v;}
+| t=< TOKENWORD > v=infixed_expression(new ThingVNode(t.image,currentLine)){return v;}
+}
+
+private AbsValueNode infixed_expression(AbsValueNode v1) throws CompilationException :
+{
+  AbsValueNode v2;
+}
+{
+       "+" v2=expression() {return new SumVNode(v1,v2,currentLine);}
+     | "-" v2=expression() {return new DiffVNode(v1,v2,currentLine);}
+     | "*" v2=expression() {return new ProdVNode(v1,v2,currentLine);}
+     | "/" v2=expression() {return new DivVNode(v1,v2,currentLine);}
+     | "<" v2=expression() {return new LessVNode(v1,v2,currentLine);}
+     | "<=" v2=expression() {return new LessEqualVNode(v1,v2,currentLine);}
+     | ">" v2=expression() {return new GreaterVNode(v1,v2,currentLine);}
+     | ">=" v2=expression() {return new GreaterEqualVNode(v1,v2,currentLine);}
+     | "=" v2=expression() {return new EqualVNode(v1,v2,currentLine);}
+     | "<>" v2=expression() {return new NotEqualVNode(v1,v2,currentLine);}
+     | {return v1;}
+}
+
+private Token thingParam() : //on accède au contenu du variable avec la commande thing en précédent le nom de la variable de ":" ou non 
+{
+    Token t;
+}
+{
+    t=< TOKENWORD > {return t;}
+    | < ACCESSOP > t=< TOKENWORD > {return t;}
+}
+
+private ArrayList<AbsValueNode> listArg() throws CompilationException : //utiliser dans la commande word
+{
+    Token t;
+    ArrayList<AbsValueNode> result = new ArrayList<AbsValueNode>();
+    ArrayList<AbsValueNode> value = new ArrayList<AbsValueNode>();
+}
+{
+    t=< NUMBER > value=listArgRecurs()   {result.add(new NumberVNode(t.image,currentLine));
+                                          result.addAll(value);
+                                          return result;}  
+    | t=< TOKENWORD > value=listArgRecurs() {result.add(new WordDataVNode(t.image,currentLine));
+                                             result.addAll(value);
+                                             return result;}
+	| < NONEVALUATE > t=< TOKENWORD > value=listArgRecurs() {result.add(new WordDataVNode(t.image,currentLine));
+                                             					result.addAll(value);
+                                            					return result;}
+    | < ACCESSOP > t=< TOKENWORD > value=listArgRecurs() {result.add(new ThingVNode(t.image,currentLine));
+                                             					result.addAll(value);
+                                            					return result;}
+    
+}
+
+private ArrayList<AbsValueNode> listArgRecurs() throws CompilationException :
+{
+    Token t;
+    ArrayList<AbsValueNode> result = new ArrayList<AbsValueNode>();
+    ArrayList<AbsValueNode> value = new ArrayList<AbsValueNode>();
+}
+{
+    t=< NUMBER > value=listArgRecurs() {result.add(new NumberVNode(t.image,currentLine));
+                                        result.addAll(value);
+                                        return result;}
+    | t=< TOKENWORD > value=listArgRecurs() {result.add(new WordDataVNode(t.image,currentLine));
+                                             result.addAll(value);
+                                             return result;}
+	| < NONEVALUATE > t=< TOKENWORD > value=listArgRecurs() {result.add(new WordDataVNode(t.image,currentLine));
+                                             					result.addAll(value);
+                                            					return result;}
+    | < ACCESSOP > t=< TOKENWORD > value=listArgRecurs() {result.add(new ThingVNode(t.image,currentLine));
+                                             					result.addAll(value);
+                                            					return result;}
+    | {return result;} 
+}
+
+private ArrayList<AbsValueNode> listComplex() throws CompilationException : // renvoie une liste d'éléments pouvant être des numbers des words des lists ou des variables à évaluer
+{
+    Token t;
+    ArrayList<AbsValueNode> result = new ArrayList<AbsValueNode>();
+    ArrayList<AbsValueNode> value = new ArrayList<AbsValueNode>();
+    ArrayList<AbsValueNode> value2 = new ArrayList<AbsValueNode>();
+}
+{
+    t=< NUMBER > value=listComplexRecurs() {result.add(new NumberVNode(t.image,currentLine));
+                                            result.addAll(value);
+                                            return result;}  
+    | t=< TOKENWORD > value=listComplexRecurs() {result.add(new WordDataVNode(t.image,currentLine));
+                                                 result.addAll(value);
+                                                 return result;}
+	| < NONEVALUATE > t=< TOKENWORD > value=listArgRecurs() {result.add(new WordDataVNode(t.image,currentLine));
+                                             					result.addAll(value);
+                                            					return result;}  
+    | < OPENBRACKET > value2=listComplex() < CLOSEBRACKET > value=listComplexRecurs() {result.add(new ListDataVNode(value2,currentLine));
+                                                            result.addAll(value);
+                                                            return result;}
+    | < ACCESSOP > t=< TOKENWORD > value=listComplexRecurs() {result.add(new ThingVNode(t.image,currentLine));
+                                                        result.addAll(value);
+                                                        return result;}
+                                               
+}
+
+private ArrayList<AbsValueNode> listComplexRecurs() throws CompilationException :
+{
+    Token t;
+    ArrayList<AbsValueNode> result = new ArrayList<AbsValueNode>();
+    ArrayList<AbsValueNode> value = new ArrayList<AbsValueNode>();
+    ArrayList<AbsValueNode> value2 = new ArrayList<AbsValueNode>();
+}
+{
+    t=< NUMBER > value=listComplexRecurs(){result.add(new NumberVNode(t.image,currentLine));
+     										result.addAll(value);
+                                            return result;}  
+    | t=< TOKENWORD > value=listComplexRecurs() {result.add(new WordDataVNode(t.image,currentLine));
+                                                result.addAll(value);
+                                                return result;}
+	| < NONEVALUATE > t=< TOKENWORD > value=listArgRecurs() {result.add(new WordDataVNode(t.image,currentLine));
+                                             					result.addAll(value);
+                                            					return result;}  
+    | < OPENBRACKET > value2=listComplex() < CLOSEBRACKET > value=listComplexRecurs() {result.add(new ListDataVNode(value2,currentLine));
+                                                            result.addAll(value);
+                                                            return result;}
+    | < ACCESSOP > t=< TOKENWORD > value=listComplexRecurs() {result.add(new ThingVNode(t.image,currentLine));
+                                                        result.addAll(value);
+                                                        return result;}
+                                               
+    | {return result;}      
+}
+
+private AbsValueNode prefixed_operation_expression() throws CompilationException :
+{
+    AbsValueNode v;
+}
+{
+    v=simple_operation_expression() {return v;}
+    | "-" v=expression() {return new MinusVNode(v,currentLine);}
+    | "(" v=recur_operation_expression() ")" {return v;}
+}
+
+private AbsValueNode simple_operation_expression() throws CompilationException :
+{
+    AbsValueNode v1,v2;
+}
+{
+  
+      < SUM > v1=expression() v2=expression() {return new SumVNode(v1, v2,currentLine);}
+    | < DIFF > v1=expression() v2=expression() {return new DiffVNode(v1, v2,currentLine);}
+    | < PROD > v1=expression() v2=expression() {return new ProdVNode(v1, v2,currentLine);}
+    | < DIV > v1=expression() v2=expression() {return new DivVNode(v1, v2,currentLine);}
+    | < AND > v1=expression() v2=expression() {return new AndVNode(v1, v2,currentLine);}
+    | < OR > v1=expression() v2=expression() {return new OrVNode(v1, v2,currentLine);}
+    | < LESS > v1=expression() v2=expression() {return new LessVNode(v1, v2,currentLine);}
+    | < LESSEQUAL > v1=expression() v2=expression() {return new LessEqualVNode(v1, v2,currentLine);}
+    | < GREATER > v1=expression() v2=expression() {return new GreaterVNode(v1, v2,currentLine);}
+    | < GREATEREQUAL > v1=expression() v2=expression() {return new GreaterEqualVNode(v1, v2,currentLine);}
+    | < EQUAL > v1=expression() v2=expression() {return new EqualVNode(v1, v2,currentLine);}
+    | < NOTEQUAL > v1=expression() v2=expression() {return new NotEqualVNode(v1, v2,currentLine);}
+}
+
+private AbsValueNode recur_operation_expression() throws CompilationException :
+{
+    AbsValueNode v1,v2;
+}
+{
+ 
+      < SUM > v1=expression() v2=sumRecur() {return new SumVNode(v1, v2,currentLine);}
+    | < DIFF > v1=expression() v2=diffRecur() {return new DiffVNode(v1, v2,currentLine);}
+    | < PROD > v1=expression() v2=prodRecur() {return new ProdVNode(v1, v2,currentLine);}
+    | < DIV > v1=expression() v2=divRecur() {return new DivVNode(v1, v2,currentLine);}
+    | < AND > v1=expression() v2=expression() {return new AndVNode(v1, v2,currentLine);}
+    | < OR > v1=expression() v2=expression() {return new OrVNode(v1, v2,currentLine);}
+}
+
+private AbsValueNode sumRecur() throws CompilationException :
+{
+    AbsValueNode v1, v2;
+}
+{
+    v1=expression() v2=sumRecur() {if(v2==null){return v1;} else{return new SumVNode(v1, v2,currentLine);}}
+    | {return null;}
+}
+
+private AbsValueNode diffRecur() throws CompilationException :
+{
+    AbsValueNode v1, v2;
+}
+{
+    v1=expression() v2=diffRecur() {if(v2==null){return v1;} else{return new DiffVNode(v1, v2,currentLine);}}
+    | {return null;}
+    
+}
+
+private AbsValueNode prodRecur() throws CompilationException :
+{
+    AbsValueNode v1, v2;
+}
+{
+    v1=expression() v2=prodRecur() {if(v2==null){return v1;} else{return new ProdVNode(v1, v2,currentLine);}}
+    | {return null;}
+    
+}
+
+private AbsValueNode divRecur() throws CompilationException :
+{
+    AbsValueNode v1, v2;
+}
+{
+    v1=expression() v2=divRecur() {if(v2==null){return v1;} else{return new DivVNode(v1, v2,currentLine);}}
+    | {return null;}
+    
+}
+
+private AbsValueNode orRecur() throws CompilationException :
+{
+    AbsValueNode v1, v2;
+}
+{
+    v1=expression() v2=divRecur() {if(v2==null){return v1;} else{return new OrVNode(v1, v2,currentLine);}}
+    | {return null;}
+    
+}
+
+private AbsValueNode andRecur() throws CompilationException :
+{
+    AbsValueNode v1, v2;
+}
+{
+    v1=expression() v2=divRecur() {if(v2==null){return v1;} else{return new AndVNode(v1, v2,currentLine);}}
+    | {return null;}
+    
+}

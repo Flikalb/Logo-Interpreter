@@ -1,0 +1,8 @@
+make "name "SantaClaus
+print ["Hello :name]
+make "i 2+3
+print :i
+make "j difference 4+5 2
+print :j
+make "k (product 4+5 6 5)
+print :k
